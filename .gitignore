@@ -5,6 +5,7 @@ __pycache__/
 
 # SQLite database
 trainerbot.db
+trainerbot.db-journal
 
 # Environment variables
 .env

@@ -34,6 +34,7 @@ def init_db():
     conn.close()
 
 def set_user(telegram_id: int, username: str, bot_token: str = None):
+    print(f"[DB] Добавление/обновление пользователя: telegram_id={telegram_id}, username={username}, bot_token={bot_token}")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''INSERT INTO users (telegram_id, username, bot_token) VALUES (?, ?, ?)
@@ -43,9 +44,14 @@ def set_user(telegram_id: int, username: str, bot_token: str = None):
     conn.close()
 
 def set_user_token(telegram_id: int, token: str):
+    print(f"[DB] Сохранение токена для пользователя {telegram_id}: {token}")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('UPDATE users SET bot_token=? WHERE telegram_id=?', (token, telegram_id))
+    if c.rowcount == 0:
+        # Если пользователя нет, добавляем с пустым username
+        c.execute('INSERT INTO users (telegram_id, username, bot_token) VALUES (?, ?, ?)', (telegram_id, '', token))
+        print(f"[DB] Пользователь {telegram_id} не найден, добавлен с пустым username.")
     conn.commit()
     conn.close()
 
@@ -106,10 +112,11 @@ async def save_token(message: Message, state: FSMContext):
         return
     token = message.text.strip()
     user_id = message.from_user.id
+    username = message.from_user.username or ""
     if len(token) < 30 or ":" not in token:
         await message.answer("❌ Похоже, это не валидный токен. Попробуй снова.")
         return
-    set_user_token(user_id, token)
+    set_user(user_id, username, token)
     await message.answer("✅ Отлично! Твой клиентский бот подключён. Скоро появятся настройки.", reply_markup=main_menu)
     await state.clear()
 
